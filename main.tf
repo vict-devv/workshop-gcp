@@ -1,0 +1,75 @@
+# Google Cloud Provider Configuration
+provider "google" {
+  project = var.project_id
+  region  = var.region
+}
+
+# Enable required Google Cloud APIs
+resource "google_project_service" "gcp_apis" {
+  for_each = toset([
+    "cloudfunctions.googleapis.com",
+    "cloudbuild.googleapis.com",
+    "firestore.googleapis.com",
+    "artifactregistry.googleapis.com",
+    "run.googleapis.com"
+  ])
+  service            = each.key
+  disable_on_destroy = false
+}
+
+# Provision Firestore in Native Mode
+resource "google_firestore_database" "database" {
+  name        = "(default)"
+  location_id = "nam5"
+  type        = "FIRESTORE_NATIVE"
+  depends_on  = [google_project_service.gcp_apis]
+}
+
+# Package and Upload Source Code
+resource "google_storage_bucket" "source_bucket" {
+  name     = "${var.project_id}-source-code"
+  location = var.region
+}
+
+data "archive_file" "lambda_zip" {
+  type        = "zip"
+  source_dir  = "./src"
+  output_path = "./tmp/api_source.zip"
+}
+
+resource "google_storage_bucket_object" "code_archive" {
+  name   = "source.zip#${data.archive_file.lambda_zip.output_md5}"
+  bucket = google_storage_bucket.source_bucket.name
+  source = data.archive_file.lambda_zip.output_path
+}
+
+# Deploy Google Cloud Function
+resource "google_cloudfunctions2_function" "serverless_api" {
+  name     = "gcp-workshop-api"
+  location = var.region
+
+  build_config {
+    runtime     = "python311"
+    entry_point = "handler"
+    source {
+      storage_source {
+        bucket = google_storage_bucket.source_bucket.name
+        object = google_storage_bucket_object.code_archive.name
+      }
+    }
+  }
+
+  service_config {
+    max_instance_count = 1
+    available_memory   = "256Mi"
+    timeout_seconds    = 60
+  }
+}
+
+# Public Access Configuration
+resource "google_cloud_run_service_iam_member" "allow_public" {
+  location = google_cloudfunctions2_function.serverless_api.location
+  service  = google_cloudfunctions2_function.serverless_api.name
+  role     = "roles/run.invoker"
+  member   = "allUsers"
+}
