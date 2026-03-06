@@ -17,6 +17,12 @@ resource "google_project_service" "gcp_apis" {
   disable_on_destroy = false
 }
 
+# This is required as some APIs take few seconds to be fully enabled
+resource "time_sleep" "wait_30_s" {
+  depends_on      = [google_project_service.gcp_apis]
+  create_duration = "30s"
+}
+
 # Provision Firestore in Native Mode
 resource "google_firestore_database" "database" {
   count       = var.create_firestore_database ? 1 : 0
@@ -48,6 +54,8 @@ resource "google_storage_bucket_object" "code_archive" {
 resource "google_cloudfunctions2_function" "serverless_api" {
   name     = var.function_name
   location = var.region
+
+  depends_on = [time_sleep.wait_30_s]
 
   build_config {
     runtime     = "python311"
