@@ -19,8 +19,9 @@ resource "google_project_service" "gcp_apis" {
 
 # Provision Firestore in Native Mode
 resource "google_firestore_database" "database" {
+  count       = var.create_firestore_database ? 1 : 0
   name        = "(default)"
-  location_id = "nam5"
+  location_id = var.firestore_location
   type        = "FIRESTORE_NATIVE"
   depends_on  = [google_project_service.gcp_apis]
 }
@@ -45,7 +46,7 @@ resource "google_storage_bucket_object" "code_archive" {
 
 # Deploy Google Cloud Function
 resource "google_cloudfunctions2_function" "serverless_api" {
-  name     = "gcp-workshop-api"
+  name     = var.function_name
   location = var.region
 
   build_config {

@@ -20,3 +20,9 @@ variable "function_name" {
   description = "The name of the Cloud Function."
   default     = "gcp-serverless-api"
 }
+
+variable "create_firestore_database" {
+  type        = bool
+  description = "Whether Terraform should create the default Firestore database. Set to false if it already exists in the project."
+  default     = true
+}
