@@ -34,8 +34,9 @@ resource "google_firestore_database" "database" {
 
 # Package and Upload Source Code
 resource "google_storage_bucket" "source_bucket" {
-  name     = "${var.project_id}-source-code"
-  location = var.region
+  name                        = "${var.project_id}-source-code"
+  location                    = var.region
+  uniform_bucket_level_access = true
 }
 
 data "archive_file" "lambda_zip" {
