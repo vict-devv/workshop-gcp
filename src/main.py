@@ -13,7 +13,10 @@ def handler(request):
     Main entry point for the Serverless CRUD API.
     Handles GET, POST, PUT, and DELETE for the 'books' collection.
     """
-    headers = {'Access-Control-Allow-Origin': '*'}
+    headers = {
+        'Access-Control-Allow-Origin': '*',
+        'Content-Type': 'application/json'
+        }
     
     # Handle CORS (Cross-Origin Resource Sharing)
     if request.method == 'OPTIONS':
